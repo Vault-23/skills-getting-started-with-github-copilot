@@ -24,18 +24,23 @@ document.addEventListener("DOMContentLoaded", () => {
         let participantsHTML = "";
         if (details.participants.length > 0) {
           participantsHTML = `
-            <div class="participants-section">
+            <div class=\"participants-section\">
               <strong>Participants:</strong>
-              <ul class="participants-list">
-                ${details.participants.map(p => `<li>${p}</li>`).join("")}
+              <ul class=\"participants-list\">
+                ${details.participants.map(p => `
+                  <li>
+                    <span>${p}</span>
+                    <span class=\"delete-icon\" title=\"Unregister\" data-activity=\"${name}\" data-participant=\"${p}\">&#128465;</span>
+                  </li>
+                `).join("")}
               </ul>
             </div>
           `;
         } else {
           participantsHTML = `
-            <div class="participants-section">
+            <div class=\"participants-section\">
               <strong>Participants:</strong>
-              <span class="no-participants">No participants yet.</span>
+              <span class=\"no-participants\">No participants yet.</span>
             </div>
           `;
         }
@@ -47,6 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           ${participantsHTML}
         `;
+
 
         activitiesList.appendChild(activityCard);
 
@@ -99,6 +105,38 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Event delegation für Lösch-Icon
+  activitiesList.addEventListener("click", async (event) => {
+    if (event.target.classList.contains("delete-icon")) {
+      const activity = event.target.getAttribute("data-activity");
+      const participant = event.target.getAttribute("data-participant");
+      if (confirm(`Unregister ${participant} from ${activity}?`)) {
+        try {
+          const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(participant)}`, {
+            method: "POST"
+          });
+          const result = await response.json();
+          if (response.ok) {
+            messageDiv.textContent = result.message || `${participant} was unregistered.`;
+            messageDiv.className = "success";
+            fetchActivities();
+          } else {
+            messageDiv.textContent = result.detail || "An error occurred";
+            messageDiv.className = "error";
+          }
+          messageDiv.classList.remove("hidden");
+          setTimeout(() => {
+            messageDiv.classList.add("hidden");
+          }, 5000);
+        } catch (error) {
+          messageDiv.textContent = "Failed to unregister. Please try again.";
+          messageDiv.className = "error";
+          messageDiv.classList.remove("hidden");
+        }
+      }
     }
   });
 
